@@ -1,0 +1,27 @@
+name: Auto Enrich & Sync (no commits)
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"   # Mondays 09:00 UTC; change as you like
+  workflow_dispatch:      # manual run button
+  push:
+    paths:
+      - "content/projects.json"   # if you edit JSON, sync immediately
+
+permissions:
+  contents: read
+
+jobs:
+  auto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enrich in memory and sync to Webflow
+        run: node scripts/auto-enrich-and-sync.mjs
+        env:
+          WEBFLOW_TOKEN: ${{ secrets.WEBFLOW_TOKEN }}
+          WEBFLOW_COLLECTION_ID: ${{ secrets.WEBFLOW_COLLECTION_ID }}
+          GH_META_TOKEN: ${{ secrets.GH_META_TOKEN }}  # optional; boosts rate limit
