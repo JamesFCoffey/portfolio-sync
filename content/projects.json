@@ -1,0 +1,18 @@
+[
+  {
+    "slug": "gh-admin-dashboard",
+    "name": "React Admin Dashboard",
+    "summary": "Modular widgets, routing, Storybook, and CI/CD.",
+    "repoUrl": "https://github.com/JamesFCoffey/admin-dashboard",
+    "liveUrl": "https://admin-dashboard-five-red.vercel.app/",
+    "tags": ["react","nextjs","dashboard"]
+  },
+  {
+    "slug": "gh-webflow-site-sync",
+    "name": "Webflow CMS Sync",
+    "summary": "Small Node + Actions workflow that syncs JSON → Webflow CMS.",
+    "repoUrl": "https://github.com/JamesFCoffey/portfolio-sync",
+    "liveUrl": "",
+    "tags": ["webflow","automation","api"]
+  }
+]
