@@ -246,8 +246,3 @@ MIT — reuse freely. If you adapt it, a star or credit is appreciated.
 
 Built by **James Coffey**.
 Pattern: “content-as-code” for Webflow using GitHub Actions + Webflow Data API.
-
----
-
-If you want, I can also add a short **“How to reuse this pattern”** section for
-other devs (nice DevRel touch) and drop status badges for the workflow.
