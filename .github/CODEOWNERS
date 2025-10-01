@@ -1,0 +1,11 @@
+# Default owner for everything (fallback)
+*                                   @JamesFCoffey
+
+# Workflows are sensitive (secrets run here) — require your review
+.github/workflows/**                @JamesFCoffey
+
+# The JSON source of truth — you own changes
+content/projects.json               @JamesFCoffey
+
+# Sync & enrichment scripts — you own changes
+scripts/**                          @JamesFCoffey
