@@ -87,47 +87,60 @@ async function listAllItems(collectionId) {
 }
 
 // Map JSON -> Webflow field API names (edit if your API names differ)
+const PROJECT_TYPE_FIELD_SLUG = "project-type-3";
+const PROJECT_TYPE_OPTION_ID = "d6e4ce0b1493150f2104fb1e05af3685";
+
+function tagsAsString(tags) {
+  if (!tags || !tags.length) return null;
+  return tags.join(", ");
+}
+
 function toCreateFields(p) {
   return {
     name: p.name,
     slug: p.slug,
-    summary: p.summary,
-    repo_url: p.repoUrl || null,
-    live_url: p.liveUrl || null,
-    // If your "tags" field is plain text, switch to tags: (p.tags||[]).join(", ")
-    tags: p.tags || [],
-    github_stars: p.github_stars ?? null,
-    last_commit_at: p.last_commit_at ?? null,
-    primary_language: p.primary_language ?? null,
-    forks: p.forks ?? null
+    "project-description": p.summary ?? null,
+    "repo-url": p.repoUrl || null,
+    "live-url": p.liveUrl || null,
+    tags: tagsAsString(p.tags),
+    "github-stars": p.github_stars ?? null,
+    "last-commit-at": p.last_commit_at ?? null,
+    "primary-language": p.primary_language ?? null,
+    forks: p.forks ?? null,
+    [PROJECT_TYPE_FIELD_SLUG]: PROJECT_TYPE_OPTION_ID
   };
 }
 
 function toUpdateFields(p) {
   return {
-    summary: p.summary,
-    repo_url: p.repoUrl || null,
-    live_url: p.liveUrl || null,
-    tags: p.tags || [],
-    github_stars: p.github_stars ?? null,
-    last_commit_at: p.last_commit_at ?? null,
-    primary_language: p.primary_language ?? null,
-    forks: p.forks ?? null
+    name: p.name,
+    "project-description": p.summary ?? null,
+    "repo-url": p.repoUrl || null,
+    "live-url": p.liveUrl || null,
+    tags: tagsAsString(p.tags),
+    "github-stars": p.github_stars ?? null,
+    "last-commit-at": p.last_commit_at ?? null,
+    "primary-language": p.primary_language ?? null,
+    forks: p.forks ?? null,
+    [PROJECT_TYPE_FIELD_SLUG]: PROJECT_TYPE_OPTION_ID
   };
 }
 
 function changed(cur, p) {
   const f = cur || {};
-  const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  const toNull = v => (v ?? null);
+  const tagString = tagsAsString(p.tags);
   return !(
-    (f.summary ?? null) === (p.summary ?? null) &&
-    (f.repo_url ?? null) === (p.repoUrl ?? null) &&
-    (f.live_url ?? null) === (p.liveUrl ?? null) &&
-    same(f.tags, p.tags) &&
-    (f.github_stars ?? null) === (p.github_stars ?? null) &&
-    (f.last_commit_at ?? null) === (p.last_commit_at ?? null) &&
-    (f.primary_language ?? null) === (p.primary_language ?? null) &&
-    (f.forks ?? null) === (p.forks ?? null)
+    toNull(f.name) === toNull(p.name) &&
+    toNull(f["project-description"]) === toNull(p.summary) &&
+    toNull(f["repo-url"]) === toNull(p.repoUrl) &&
+    toNull(f["live-url"]) === toNull(p.liveUrl) &&
+    toNull(f.tags) === toNull(tagString) &&
+    toNull(f["github-stars"]) === toNull(p.github_stars) &&
+    toNull(f["last-commit-at"]) === toNull(p.last_commit_at) &&
+    toNull(f["primary-language"]) === toNull(p.primary_language) &&
+    toNull(f.forks) === toNull(p.forks) &&
+    toNull(f[PROJECT_TYPE_FIELD_SLUG]) === PROJECT_TYPE_OPTION_ID
   );
 }
 

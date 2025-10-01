@@ -1,12 +1,6 @@
 # Webflow Portfolio Sync (GitHub JSON → Webflow CMS)
 
-**Public, teachable template** for running your portfolio like code.
-
-* Keep a single `projects.json` in this repo as the source of truth for **code projects**.
-* A weekly Action enriches each project with **GitHub stars, forks, primary language, last commit**.
-* A sync script **creates/updates & publishes** matching items in your Webflow **Projects** CMS—without touching your manual case studies.
-
-> Why public? It’s easy for others to learn/replicate, you can accept PRs, and secrets stay safe in GitHub Actions.
+Keep a single `projects.json` in this repo as the source of truth for code projects. One automation script enriches each entry with live GitHub metadata, then syncs the results into your Webflow Projects collection (create/update + publish) without touching hand-built case studies.
 
 ---
 
@@ -14,45 +8,27 @@
 
 ```
 content/
-  projects.json            # You edit this. Code projects only (case studies live in Webflow UI)
+  projects.json            # You edit this. Code projects only (case studies stay in Webflow)
 scripts/
-  enrich-projects.mjs      # Weekly: updates GitHub stats inside projects.json
-  sync-webflow-projects.mjs# Sync: pushes JSON → Webflow CMS and publishes
+  auto-enrich-and-sync.mjs # Reads JSON → enriches with GitHub → syncs to Webflow in one pass
 .github/
   workflows/
-    weekly-enrich-and-sync.yml  # Schedules enrichment, commits changes, then syncs to Webflow
+    auto-weekly.yml        # Schedules weekly runs + manual dispatch support
 ```
 
 ---
 
 ## Quick start
 
-1. **Create Webflow credentials (one-time)**
-
-   * Webflow → your site → *Project settings* → *Apps & Integrations* → **Data API token** (CMS read/write).
-   * Find your **Projects Collection ID** (see “Finding your Collection ID” below).
-
-2. **Add GitHub Actions secrets (repo → Settings → Secrets and variables → Actions):**
-
-   * `WEBFLOW_TOKEN` – your Webflow Data API token
-   * `WEBFLOW_COLLECTION_ID` – your *Projects* collection ID
-   * `GH_META_TOKEN` *(optional but recommended)* – GitHub PAT with read access to public repos (raises rate limits)
-
-3. **Edit `content/projects.json`** (see schema below), then push to `main`.
-
-4. **Run the workflow**
-
-   * Actions → “**Weekly Enrich & Sync to Webflow**” → **Run workflow** (or wait for the scheduled run).
-   * Check Webflow CMS → Projects: new/updated items should be **published**.
-
----
-
-## Why this pattern?
-
-* **Automation:** Weekly enrichment + publish on demand (no manual copy/paste).
-* **Safety:** Only items that exist in `projects.json` are updated. Your manual case studies (not in JSON) are never touched.
-* **Versioned content:** PR reviews, diff, rollback, link checks.
-* **Reusable data:** The same JSON can feed docs, a Next.js demo, OG images, etc.
+1. **Create Webflow credentials**
+   * Webflow → Project settings → *Apps & Integrations* → generate a **Data API token** (CMS read/write).
+   * Record your **Projects collection ID** (see below).
+2. **Add GitHub Actions secrets** (`Settings → Secrets and variables → Actions`)
+   * `WEBFLOW_TOKEN` – the Data API token
+   * `WEBFLOW_COLLECTION_ID` – the Projects collection ID
+   * `GH_META_TOKEN` *(optional)* – GitHub PAT with `public_repo` scope for higher rate limits
+3. **Edit `content/projects.json`**, commit, and push to `main`.
+4. **Run the workflow**: Actions → “Auto Enrich & Sync (no commits)” → **Run workflow**, or wait for the Monday 09:00 UTC schedule. New/updated items are published automatically.
 
 ---
 
@@ -60,7 +36,7 @@ scripts/
 
 `content/projects.json` is an array of project objects.
 
-> **Slug convention:** prefix code projects with `gh-…` to avoid collisions with manual items.
+> **Slug convention:** prefix JSON-driven projects with `gh-…` to avoid collisions with existing Webflow items.
 
 ```json
 [
@@ -69,10 +45,9 @@ scripts/
     "name": "React Admin Dashboard",
     "summary": "Modular widgets, routing, Storybook, and CI/CD.",
     "repoUrl": "https://github.com/JamesFCoffey/admin-dashboard",
-    "liveUrl": "",
-    "tags": ["react","nextjs","dashboard"],
+    "liveUrl": "https://admin-dashboard-five-red.vercel.app/",
+    "tags": ["react", "nextjs", "dashboard"],
 
-    // Filled or refreshed by the weekly enrichment:
     "github_stars": 0,
     "forks": 0,
     "primary_language": null,
@@ -83,82 +58,76 @@ scripts/
 
 **Add a new project**
 
-* Append a new object with a unique `"slug"`, set `name`, `summary`, `repoUrl`, `liveUrl`, `tags`.
-* Commit + push. The next run will create/publish a CMS item (and fill metrics on the next weekly pass).
+- Append a new object with a unique `slug`, fill `name`, `summary`, `repoUrl`, `liveUrl`, `tags`.
+- Commit + push. The workflow will enrich GitHub stats and publish/update the CMS item in the same run.
 
 ---
 
 ## Webflow field mapping
 
-Your Webflow **Projects** collection should include fields with **these API names** (or adjust the mapping in `scripts/sync-webflow-projects.mjs`):
+The setup script created/renamed the relevant fields. Confirm your Projects collection exposes these **field slugs**:
 
-| JSON key         | Webflow field API name | Type         |
-| ---------------- | ---------------------- | ------------ |
-| name             | `name`                 | Plain text   |
-| slug             | `slug`                 | Slug         |
-| summary          | `summary`              | Plain/Rich   |
-| repoUrl          | `repo_url`             | URL          |
-| liveUrl          | `live_url`             | URL          |
-| tags             | `tags`                 | Text/Options |
-| github_stars     | `github_stars`         | Number       |
-| forks            | `forks`                | Number       |
-| primary_language | `primary_language`     | Plain text   |
-| last_commit_at   | `last_commit_at`       | Date/Time    |
+| JSON key         | Webflow field slug      | Type/notes                          |
+| ---------------- | ----------------------- | ----------------------------------- |
+| name             | `name`                   | Plain text                          |
+| slug             | `slug`                   | Slug                                |
+| summary          | `project-description`   | Plain text (multi-line)             |
+| repoUrl          | `repo-url`               | Link                                |
+| liveUrl          | `live-url`               | Link                                |
+| tags             | `tags`                   | Plain text (comma separated string) |
+| github_stars     | `github-stars`           | Number                              |
+| forks            | `forks`                  | Number                              |
+| primary_language | `primary-language`       | Plain text                          |
+| last_commit_at   | `last-commit-at`         | Date/Time                           |
+| project_type     | `project-type-3`         | Option (auto-set to “Code project”)  |
 
-> The sync script **only updates these automation fields**. It does **not** overwrite any narrative/case-study fields you author directly in Webflow.
+- `tags` are stored as a comma-separated string (`react, nextjs, dashboard`).
+- JSON-backed items always get `project-type = Code project`; use this for conditional visibility vs. manual case studies.
+- If you change option IDs in Webflow, update `PROJECT_TYPE_OPTION_ID` inside `scripts/auto-enrich-and-sync.mjs`.
+
+> The automation only touches these fields. Narrative content, hero media, etc. authored in Webflow remain untouched.
 
 ---
 
 ## Finding your Collection ID
 
-Use the Webflow Data API (v2):
-
 ```bash
 # List sites accessible by your token
 curl -H "Authorization: Bearer $WEBFLOW_TOKEN" https://api.webflow.com/v2/sites
 
-# Then list collections for your site_id
+# Then list collections for your site
 curl -H "Authorization: Bearer $WEBFLOW_TOKEN" https://api.webflow.com/v2/sites/<site_id>/collections
 ```
 
-Copy the `id` of your **Projects** collection and store it as `WEBFLOW_COLLECTION_ID` in repo secrets.
+Copy the `id` for the **Projects** collection and store it as `WEBFLOW_COLLECTION_ID`.
 
 ---
 
 ## Local development (optional)
 
-If you want to run scripts locally:
+1. Create `.env` with `WEBFLOW_TOKEN`, `WEBFLOW_COLLECTION_ID`, optional `GH_META_TOKEN`.
+2. Run `node scripts/auto-enrich-and-sync.mjs`.
 
-1. `cp .env.example .env` and fill values
-2. `node scripts/enrich-projects.mjs`
-3. `node scripts/sync-webflow-projects.mjs`
-
-> `.env` is ignored by git. CI uses **GitHub Secrets**, not your local `.env`.
+`.env` is gitignored; CI relies on GitHub Secrets.
 
 ---
 
-## How it works
+## How the automation works
 
-### 1) Weekly enrichment
+1. Load every project from `content/projects.json`.
+2. For each repo, pull GitHub metadata (stars, forks, primary language, last push).
+3. Upsert Webflow CMS items based on `slug`, set `project-type = Code project`, publish the touched items.
 
-* Reads each `repoUrl`, hits GitHub’s API, and writes: `github_stars`, `forks`, `primary_language`, `last_commit_at` **back to `projects.json`**.
-* Commits the file if anything changed.
-
-### 2) Sync & publish
-
-* Loads `projects.json`.
-* **Creates** items for slugs that don’t exist; **updates** items for slugs that do.
-* Calls **publish** so changes go live.
-* **Never deletes/unpublishes** items (safe default).
+The script never deletes/unpublishes items—safe default for public portfolios.
 
 ---
 
-## Workflows
+## Workflow reference
 
-**.github/workflows/weekly-enrich-and-sync.yml**
+**.github/workflows/auto-weekly.yml**
 
 ```yaml
-name: Weekly Enrich & Sync to Webflow
+name: Auto Enrich & Sync (no commits)
 on:
   schedule:
     - cron: "0 9 * * 1"   # Mondays 09:00 UTC
@@ -168,81 +137,44 @@ on:
       - "content/projects.json"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  run:
+  auto:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Enrich projects.json with GitHub metadata
-        run: node scripts/enrich-projects.mjs
-        env:
-          GH_META_TOKEN: ${{ secrets.GH_META_TOKEN }}
-
-      - name: Commit enriched JSON (if changed)
-        run: |
-          if [[ -n "$(git status --porcelain content/projects.json)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add content/projects.json
-            git commit -m "chore: enrich projects.json (weekly)"
-            git push
-          else
-            echo "No changes to commit."
-          fi
-
-      - name: Sync to Webflow CMS
-        run: node scripts/sync-webflow-projects.mjs
+      - name: Enrich in memory and sync to Webflow
+        run: node scripts/auto-enrich-and-sync.mjs
         env:
           WEBFLOW_TOKEN: ${{ secrets.WEBFLOW_TOKEN }}
           WEBFLOW_COLLECTION_ID: ${{ secrets.WEBFLOW_COLLECTION_ID }}
+          GH_META_TOKEN: ${{ secrets.GH_META_TOKEN }}
 ```
 
 ---
 
-## Security notes for a **public** repo
+## Security notes for a public template
 
-* Keep tokens in **Actions → Secrets** only.
-* Protect `main` and review changes under `.github/workflows/**`.
-* PRs from forks **won’t** receive secrets by default (keep it that way).
-* Scope tokens minimally: Webflow CMS read/write for this site; GitHub PAT read-only.
+- Keep tokens strictly in Actions secrets.
+- Protect `main` and review changes to `.github/workflows/**`.
+- Forked PRs never receive secrets by default—leave it that way.
+- Scope tokens minimally (Webflow CMS read/write for this site, GitHub PAT read-only).
 
 ---
 
 ## Troubleshooting
 
-* **Nothing updated:** Confirm `WEBFLOW_COLLECTION_ID`, token scopes, and that your item **slugs** in Webflow match `projects.json`.
-* **Fields don’t change:** Your Webflow field API names may differ—adjust the mapping in `sync-webflow-projects.mjs`.
-* **Rate limits:** Add `GH_META_TOKEN` as a secret; it boosts GitHub API limits.
-* **Removed from JSON still live on site:** Expected. The script doesn’t unpublish/delete by default. If you want **strict mode**, open an issue or add a flag to unpublish items whose slugs no longer appear.
-
----
-
-## FAQ
-
-**Q: Why not put case studies in `projects.json` too?**
-A: Those are better authored in Webflow’s UI (rich text, images, layout). This repo focuses on **code projects** that benefit from automation and GitHub enrichment.
-
-**Q: Can I combine multiple collections?**
-A: Webflow collection lists can’t aggregate different collections natively. That’s why we keep a single **Projects** collection and separate types visually (e.g., filter by tag or template).
-
-**Q: Can I run this more often than weekly?**
-A: Yes—adjust the cron, or trigger on push to `projects.json`.
+- **No updates in Webflow:** Confirm slugs match and secrets are correct.
+- **Field mismatch errors:** Verify the field slugs above; update the script mapping if you customized them.
+- **GitHub rate limits:** Add `GH_META_TOKEN` (a PAT) to lift unauthenticated limits.
+- **Want strict deletes?** Extend the script to archive/unpublish items whose slugs disappear from JSON.
 
 ---
 
 ## License
 
-MIT — reuse freely. If you adapt it, a star or credit is appreciated.
-
----
-
-## Credits
-
-Built by **James Coffey**.
-Pattern: “content-as-code” for Webflow using GitHub Actions + Webflow Data API.
+MIT — reuse freely. Credit is appreciated but not required.
